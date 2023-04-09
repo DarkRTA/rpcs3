@@ -19,6 +19,7 @@
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/Turntable.h"
+#include "Emu/Io/RB3MidiKeyboard.h"
 #include "Emu/Io/usio.h"
 
 #include <libusb.h>
@@ -302,6 +303,9 @@ usb_handler_thread::usb_handler_thread()
 		sys_usbd.notice("Adding emulated v406 usio");
 		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
 	}
+
+	sys_usbd.notice("Adding Emulated Midi Pro Adapter");
+	usb_devices.push_back(std::make_shared<usb_device_rb3_midi_keyboard>(get_new_location()));
 
 	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)
 	{

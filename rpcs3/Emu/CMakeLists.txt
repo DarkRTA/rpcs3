@@ -397,9 +397,14 @@ target_sources(rpcs3_emu PRIVATE
     Io/usb_vfs.cpp
     Io/Skylander.cpp
     Io/GHLtar.cpp
+    Io/RB3MidiKeyboard.cpp
     Io/Buzz.cpp
     Io/Turntable.cpp
     Io/usio.cpp
+)
+
+target_link_libraries(rpcs3_emu PRIVATE
+    3rdparty::rtmidi
 )
 
 # Np
