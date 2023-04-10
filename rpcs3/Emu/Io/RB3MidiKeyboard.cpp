@@ -1,4 +1,4 @@
-// Guitar Hero Live controller emulator
+// Rock Band 3 MIDI Pro Adapter Emulator (Keyboard Mode)
 
 #include "stdafx.h"
 #include "RB3MidiKeyboard.h"
@@ -136,7 +136,8 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 
 void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 {
-	// TODO: properly emulate the press/release count
+	// this is not properly emulated but the game really does not seem
+	// to care
 	button_state.count++;
 
 	// handle note on/off messages
@@ -190,17 +191,20 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 	}
 
 	// control channel for overdrive
-	if (msg[0] == 0xB0) {
-		switch (msg[1]) {
-			case 0x1:
-			case 0x40:
-				button_state.overdrive = msg[2] > 40;
-				break;
+	if (msg[0] == 0xB0)
+	{
+		switch (msg[1])
+		{
+		case 0x1:
+		case 0x40:
+			button_state.overdrive = msg[2] > 40;
+			break;
 		}
 	}
 
 	// pitch wheel
-	if (msg[0] == 0xE0) {
+	if (msg[0] == 0xE0)
+	{
 		u16 msb = msg[2];
 		u16 lsb = msg[1];
 		button_state.pitch_wheel = (msb << 7) | lsb;
@@ -226,10 +230,12 @@ void usb_device_rb3_midi_keyboard::write_state(u8 buf[27])
 	{
 		buf[2] = 4;
 	}
-	else if (button_state.dpad_left) {
+	else if (button_state.dpad_left)
+	{
 		buf[2] = 6;
 	}
-	else if (button_state.dpad_right) {
+	else if (button_state.dpad_right)
+	{
 		buf[2] = 2;
 	}
 
@@ -243,7 +249,8 @@ void usb_device_rb3_midi_keyboard::write_state(u8 buf[27])
 		key_mask |= 0x1 * button_state.keys[i];
 
 		// the keyboard can only report 5 velocities from left to right
-		if (button_state.keys[i] && vel_idx < 5) {
+		if (button_state.keys[i] && vel_idx < 5)
+		{
 			buf[8 + vel_idx++] = button_state.velocities[i];
 		}
 	}
@@ -259,7 +266,8 @@ void usb_device_rb3_midi_keyboard::write_state(u8 buf[27])
 
 	// pitch wheel
 	u8 wheel_pos = std::abs((button_state.pitch_wheel >> 6) - 0x80);
-	if (wheel_pos >= 5) {
+	if (wheel_pos >= 5)
+	{
 		buf[15] = std::min<u8>(std::max<u8>(0x5, wheel_pos), 0x75);
 	}
 }

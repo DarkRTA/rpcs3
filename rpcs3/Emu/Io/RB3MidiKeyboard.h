@@ -17,7 +17,8 @@ private:
 
 	// button states
 	// TODO: emulate velocity
-	struct {
+	struct
+	{
 		u8 count = 0;
 
 		bool cross = false;
@@ -35,13 +36,14 @@ private:
 		bool dpad_right = false;
 
 		bool keys[25] = {false};
-		u8 velocities[25] = { 0 };
+		u8 velocities[25] = {0};
 
 		s16 pitch_wheel = 0;
 	} button_state;
 
-	void parse_midi_message(std::vector<u8> &msg);
+	void parse_midi_message(std::vector<u8>& msg);
 	void write_state(u8 buf[27]);
+
 public:
 	usb_device_rb3_midi_keyboard(const std::array<u8, 7>& location);
 	~usb_device_rb3_midi_keyboard();
