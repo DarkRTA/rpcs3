@@ -185,6 +185,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 		{
 			u32 key = msg[1] - 48;
 			button_state.keys[key] = ((0x10 & msg[0]) == 0x10);
+			button_state.velocities[key] = msg[2];
 		}
 	}
 
@@ -232,14 +233,22 @@ void usb_device_rb3_midi_keyboard::write_state(u8 buf[27])
 		buf[2] = 2;
 	}
 
-	// build key bitfield
+	// build key bitfield and write velocities
 	u32 key_mask = 0;
+	u8 vel_idx = 0;
+
 	for (u32 i = 0; i < 25; i++)
 	{
 		key_mask <<= 1;
 		key_mask |= 0x1 * button_state.keys[i];
+
+		// the keyboard can only report 5 velocities from left to right
+		if (button_state.keys[i] && vel_idx < 5) {
+			buf[8 + vel_idx++] = button_state.velocities[i];
+		}
 	}
 
+	// write keys
 	buf[5] = (key_mask >> 17) & 0xff;
 	buf[6] = (key_mask >> 9) & 0xff;
 	buf[7] = (key_mask >> 1) & 0xff;
