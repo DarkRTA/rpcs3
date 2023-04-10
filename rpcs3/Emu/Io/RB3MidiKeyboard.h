@@ -35,6 +35,8 @@ private:
 		bool dpad_right = false;
 
 		bool keys[25] = {false};
+		u8 velocities[25] = { 0 };
+
 		s16 pitch_wheel = 0;
 	} button_state;
 
