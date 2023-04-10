@@ -86,4 +86,4 @@
 	ignore = dirty
 [submodule "3rdparty/rtmidi"]
 	path = 3rdparty/rtmidi
-	url = https://github.com/thestk/rtmidi
+	url = ../../thestk/rtmidi

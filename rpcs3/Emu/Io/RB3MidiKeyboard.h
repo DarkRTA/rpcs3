@@ -16,21 +16,26 @@ private:
 	std::unique_ptr<RtMidiIn> midi_in;
 
 	// button states
-
 	// TODO: emulate velocity
 	struct {
 		u8 count = 0;
 
 		bool cross = false;
 		bool circle = false;
+		bool square = false;
+		bool triangle = false;
+
 		bool start = false;
 		bool select = false;
 		bool overdrive = false;
+
 		bool dpad_up = false;
 		bool dpad_down = false;
+		bool dpad_left = false;
+		bool dpad_right = false;
 
 		bool keys[25] = {false};
-		u16 pitch_wheel = 0;
+		s16 pitch_wheel = 0;
 	} button_state;
 
 	void parse_midi_message(std::vector<u8> &msg);

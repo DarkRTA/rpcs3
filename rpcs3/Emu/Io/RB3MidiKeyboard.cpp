@@ -22,8 +22,8 @@ usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 
 	usb_device_emulated::add_string(str1);
 	usb_device_emulated::add_string(str2);
 
+	// set up midi input
 	midi_in = std::make_unique<RtMidiIn>();
-
 	midi_in->openVirtualPort("RPCS3 Midi In");
 	rb3_midi_keyboard_log.success("creating midi port");
 }
@@ -122,33 +122,14 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 		midi_in->getMessage(&midi_msg);
 	}
 
-	buf[0] = 0x00;
-	buf[1] = 0x00;
-	buf[2] = 0x08;
-	buf[3] = 0x80;
-	buf[4] = 0x80;
-	buf[5] = 0x80;
-	buf[6] = 0x80;
-	buf[7] = 0x00;
-	buf[8] = 0x00;
-	buf[9] = 0x00;
-	buf[10] = 0x00;
-	buf[11] = 0x00;
-	buf[12] = 0x00;
-	buf[13] = 0x00;
-	buf[14] = 0x00;
-	buf[15] = 0x00;
-	buf[16] = 0x00;
-	buf[17] = 0x00;
-	buf[18] = 0x00;
-	buf[19] = 0x00;
-	buf[20] = 0x02;
-	buf[21] = 0x00;
-	buf[22] = 0x02;
-	buf[23] = 0x00;
-	buf[24] = 0x02;
-	buf[25] = 0x00;
-	buf[26] = 0x02;
+	// default input state
+	u8 bytes[27] = {
+		0x00, 0x00, 0x08, 0x80, 0x80, 0x80, 0x80, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x02, 0x00,
+		0x02, 0x00, 0x02};
+
+	memcpy(buf, bytes, 27);
 
 	write_state(buf);
 }
@@ -157,60 +138,104 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 {
 	// TODO: properly emulate the press/release count
 	button_state.count++;
-	switch (msg[0])
+
+	// handle note on/off messages
+	if (msg[0] == 0x80 || msg[0] == 0x90)
 	{
-	case 0x80: // note off ch1
-	case 0x90: // note on ch1
+		// handle navigation buttons
 		switch (msg[1])
 		{
-		case 45:
+		case 44: // G#2
 			button_state.cross = ((0x10 & msg[0]) == 0x10);
 			break;
-		case 46:
+		case 42: // F#2
 			button_state.circle = ((0x10 & msg[0]) == 0x10);
 			break;
-		case 44:
+		case 39: // D#2
+			button_state.square = ((0x10 & msg[0]) == 0x10);
+			break;
+		case 37: // C#2
+			button_state.triangle = ((0x10 & msg[0]) == 0x10);
+			break;
+		case 46: // A#2
 			button_state.start = ((0x10 & msg[0]) == 0x10);
 			break;
-		case 42:
+		case 36: // C2
 			button_state.select = ((0x10 & msg[0]) == 0x10);
 			break;
-		case 47:
+		case 45: // A2
 			button_state.overdrive = ((0x10 & msg[0]) == 0x10);
 			break;
-		case 41:
+		case 41: // F2
 			button_state.dpad_up = ((0x10 & msg[0]) == 0x10);
 			break;
-		case 43:
+		case 43: // G2
 			button_state.dpad_down = ((0x10 & msg[0]) == 0x10);
 			break;
+		case 38: // D2
+			button_state.dpad_left = ((0x10 & msg[0]) == 0x10);
+			break;
+		case 40: // E2
+			button_state.dpad_right = ((0x10 & msg[0]) == 0x10);
+			break;
 		}
-		if (msg[1] >= 48 && msg[1] <= 72) {
+
+		// handle keyboard keys
+		if (msg[1] >= 48 && msg[1] <= 72)
+		{
 			u32 key = msg[1] - 48;
 			button_state.keys[key] = ((0x10 & msg[0]) == 0x10);
 		}
-		break;
+	}
+
+	// control channel for overdrive
+	if (msg[0] == 0xB0) {
+		switch (msg[1]) {
+			case 0x1:
+			case 0x40:
+				button_state.overdrive = msg[2] > 40;
+				break;
+		}
+	}
+
+	// pitch wheel
+	if (msg[0] == 0xE0) {
+		u16 msb = msg[2];
+		u16 lsb = msg[1];
+		button_state.pitch_wheel = (msb << 7) | lsb;
 	}
 }
 
-void usb_device_rb3_midi_keyboard::write_state(u8 buf[27]) {
+void usb_device_rb3_midi_keyboard::write_state(u8 buf[27])
+{
 	// buttons
 	buf[0] |= 0b0000'0010 * button_state.cross;
 	buf[0] |= 0b0000'0100 * button_state.circle;
+	buf[0] |= 0b0000'0001 * button_state.square;
+	buf[0] |= 0b0000'1000 * button_state.triangle;
 	buf[1] |= 0b0000'0010 * button_state.start;
 	buf[1] |= 0b0000'0001 * button_state.select;
 
-
 	// dpad
-	if (button_state.dpad_up) {
+	if (button_state.dpad_up)
+	{
 		buf[2] = 0;
-	} else if (button_state.dpad_down) {
+	}
+	else if (button_state.dpad_down)
+	{
 		buf[2] = 4;
 	}
+	else if (button_state.dpad_left) {
+		buf[2] = 6;
+	}
+	else if (button_state.dpad_right) {
+		buf[2] = 2;
+	}
 
+	// build key bitfield
 	u32 key_mask = 0;
-	// build key mask
-	for (u32 i = 0; i < 25; i++) {
+	for (u32 i = 0; i < 25; i++)
+	{
 		key_mask <<= 1;
 		key_mask |= 0x1 * button_state.keys[i];
 	}
@@ -220,8 +245,12 @@ void usb_device_rb3_midi_keyboard::write_state(u8 buf[27]) {
 	buf[7] = (key_mask >> 1) & 0xff;
 	buf[8] |= 0b1000'0000 * (key_mask & 0x1);
 
-
-
 	// overdrive
-	buf[13] |= 0x80 * button_state.overdrive;
+	buf[13] |= 0b1000'0000 * button_state.overdrive;
+
+	// pitch wheel
+	u8 wheel_pos = std::abs((button_state.pitch_wheel >> 6) - 0x80);
+	if (wheel_pos >= 5) {
+		buf[15] = std::min<u8>(std::max<u8>(0x5, wheel_pos), 0x75);
+	}
 }
