@@ -141,7 +141,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 	button_state.count++;
 
 	// handle note on/off messages
-	if (msg[0] == 0x80 || msg[0] == 0x90)
+	if ((msg[0] == 0x80 || msg[0] == 0x90) && msg.size() == 3)
 	{
 		// handle navigation buttons
 		switch (msg[1])
@@ -191,7 +191,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 	}
 
 	// control channel for overdrive
-	if (msg[0] == 0xB0)
+	if (msg[0] == 0xB0 && msg.size() == 3)
 	{
 		switch (msg[1])
 		{
@@ -203,7 +203,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 	}
 
 	// pitch wheel
-	if (msg[0] == 0xE0)
+	if (msg[0] == 0xE0 && msg.size() == 3)
 	{
 		u16 msb = msg[2];
 		u16 lsb = msg[1];
