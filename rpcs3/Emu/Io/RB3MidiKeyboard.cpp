@@ -118,24 +118,26 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 
 	memcpy(buf, bytes, 27);
 
-	while (true) {
+	while (true)
+	{
 		u8 midi_msg[32];
 		usz size = sizeof(midi_msg);
 
 		// this returns a double as some sort of delta time, with -1.0
 		// being used to signal an error
-		if (rtmidi_in_get_message(midi_in, midi_msg, &size) == -1.0) {
+		if (rtmidi_in_get_message(midi_in, midi_msg, &size) == -1.0)
+		{
 			rb3_midi_keyboard_log.error("Error getting midi message");
 			return;
 		}
 
-		if (size == 0) {
+		if (size == 0)
+		{
 			break;
 		}
 
 		parse_midi_message(midi_msg, size);
 	}
-
 
 	write_state(buf);
 }
