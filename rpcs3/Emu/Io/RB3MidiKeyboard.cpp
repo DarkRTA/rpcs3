@@ -3,7 +3,6 @@
 #include "stdafx.h"
 #include "RB3MidiKeyboard.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
-#include "Input/pad_thread.h"
 
 LOG_CHANNEL(rb3_midi_keyboard_log);
 
@@ -23,13 +22,14 @@ usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 
 	usb_device_emulated::add_string(str2);
 
 	// set up midi input
-	midi_in = std::make_unique<RtMidiIn>();
-	midi_in->openVirtualPort("RPCS3 Midi In");
+	midi_in = rtmidi_in_create_default();
+	rtmidi_open_virtual_port(midi_in, "RPCS3 Keyboard Midi In");
 	rb3_midi_keyboard_log.success("creating midi port");
 }
 
 usb_device_rb3_midi_keyboard::~usb_device_rb3_midi_keyboard()
 {
+	rtmidi_in_free(midi_in);
 }
 
 static u8 disabled_response[] = {
@@ -100,8 +100,6 @@ void usb_device_rb3_midi_keyboard::control_transfer(u8 bmRequestType, u8 bReques
 	}
 }
 
-extern bool is_input_allowed();
-
 void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
 	transfer->fake = true;
@@ -110,17 +108,6 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 	// the real device takes 8ms to send a response, but there is
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
-
-	memset(buf, 0, buf_size);
-
-	std::vector<u8> midi_msg;
-
-	midi_in->getMessage(&midi_msg);
-	while (midi_msg.size() != 0)
-	{
-		parse_midi_message(midi_msg);
-		midi_in->getMessage(&midi_msg);
-	}
 
 	// default input state
 	u8 bytes[27] = {
@@ -131,17 +118,36 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 
 	memcpy(buf, bytes, 27);
 
+	while (true) {
+		u8 midi_msg[32];
+		usz size = sizeof(midi_msg);
+
+		// this returns a double as some sort of delta time, with -1.0
+		// being used to signal an error
+		if (rtmidi_in_get_message(midi_in, midi_msg, &size) == -1.0) {
+			rb3_midi_keyboard_log.error("Error getting midi message");
+			return;
+		}
+
+		if (size == 0) {
+			break;
+		}
+
+		parse_midi_message(midi_msg, size);
+	}
+
+
 	write_state(buf);
 }
 
-void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
+void usb_device_rb3_midi_keyboard::parse_midi_message(u8 msg[32], usz size)
 {
 	// this is not properly emulated but the game really does not seem
 	// to care
 	button_state.count++;
 
 	// handle note on/off messages
-	if ((msg[0] == 0x80 || msg[0] == 0x90) && msg.size() == 3)
+	if ((msg[0] == 0x80 || msg[0] == 0x90) && size == 3)
 	{
 		// handle navigation buttons
 		switch (msg[1])
@@ -191,7 +197,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 	}
 
 	// control channel for overdrive
-	if (msg[0] == 0xB0 && msg.size() == 3)
+	if (msg[0] == 0xB0 && size == 3)
 	{
 		switch (msg[1])
 		{
@@ -203,7 +209,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(std::vector<u8>& msg)
 	}
 
 	// pitch wheel
-	if (msg[0] == 0xE0 && msg.size() == 3)
+	if (msg[0] == 0xE0 && size == 3)
 	{
 		u16 msb = msg[2];
 		u16 lsb = msg[1];
