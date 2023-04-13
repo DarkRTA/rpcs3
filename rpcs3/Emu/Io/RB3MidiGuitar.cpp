@@ -119,19 +119,21 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 
 	memcpy(buf, bytes, 27);
 
-
-	while (true) {
+	while (true)
+	{
 		u8 midi_msg[32];
 		usz size = sizeof(midi_msg);
 
 		// this returns a double as some sort of delta time, with -1.0
 		// being used to signal an error
-		if (rtmidi_in_get_message(midi_in, midi_msg, &size) == -1.0) {
+		if (rtmidi_in_get_message(midi_in, midi_msg, &size) == -1.0)
+		{
 			rb3_midi_guitar_log.error("Error getting midi message");
 			return;
 		}
 
-		if (size == 0) {
+		if (size == 0)
+		{
 			break;
 		}
 
@@ -197,7 +199,8 @@ void usb_device_rb3_midi_guitar::parse_midi_message(u8 msg[32], usz size)
 	}
 
 	// sustain pedal
-	if (size == 3 && msg[0] == 0xB0 && msg[1] == 0x40) {
+	if (size == 3 && msg[0] == 0xB0 && msg[1] == 0x40)
+	{
 		button_state.sustain_pedal = msg[2] >= 40;
 	}
 }
@@ -223,7 +226,8 @@ void usb_device_rb3_midi_guitar::write_state(u8 buf[27])
 	buf[9] = button_state.string_velocities[5];
 
 	// encode tilt sensor/sustain_pedal
-	if (button_state.tilt_sensor || button_state.sustain_pedal) {
+	if (button_state.tilt_sensor || button_state.sustain_pedal)
+	{
 		buf[15] = 0x7f;
 		buf[16] = 0x7f;
 		buf[17] = 0x7f;
