@@ -3,7 +3,6 @@
 #include "stdafx.h"
 #include "RB3MidiGuitar.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
-#include "Input/pad_thread.h"
 
 LOG_CHANNEL(rb3_midi_guitar_log);
 
@@ -23,14 +22,15 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 	usb_device_emulated::add_string(str2);
 
 	// set up midi input
-	midi_in = std::make_unique<RtMidiIn>();
-	midi_in->ignoreTypes(false, true, true);
-	midi_in->openVirtualPort("RPCS3 Guitar Midi In");
+	midi_in = rtmidi_in_create_default();
+	rtmidi_in_ignore_types(midi_in, false, true, true);
+	rtmidi_open_virtual_port(midi_in, "RPCS3 Guitar Midi In");
 	rb3_midi_guitar_log.success("creating midi port");
 }
 
 usb_device_rb3_midi_guitar::~usb_device_rb3_midi_guitar()
 {
+	rtmidi_in_free(midi_in);
 }
 
 static u8 disabled_response[] = {
@@ -101,8 +101,6 @@ void usb_device_rb3_midi_guitar::control_transfer(u8 bmRequestType, u8 bRequest,
 	}
 }
 
-extern bool is_input_allowed();
-
 void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
 	transfer->fake = true;
@@ -111,17 +109,6 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 	// the real device takes 8ms to send a response, but there is
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
-
-	memset(buf, 0, buf_size);
-
-	std::vector<u8> midi_msg;
-
-	midi_in->getMessage(&midi_msg);
-	while (midi_msg.size() != 0)
-	{
-		parse_midi_message(midi_msg);
-		midi_in->getMessage(&midi_msg);
-	}
 
 	// default input state
 	u8 bytes[27] = {
@@ -132,17 +119,36 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 
 	memcpy(buf, bytes, 27);
 
+
+	while (true) {
+		u8 midi_msg[32];
+		usz size = sizeof(midi_msg);
+
+		// this returns a double as some sort of delta time, with -1.0
+		// being used to signal an error
+		if (rtmidi_in_get_message(midi_in, midi_msg, &size) == -1.0) {
+			rb3_midi_guitar_log.error("Error getting midi message");
+			return;
+		}
+
+		if (size == 0) {
+			break;
+		}
+
+		parse_midi_message(midi_msg, size);
+	}
+
 	write_state(buf);
 }
 
-void usb_device_rb3_midi_guitar::parse_midi_message(std::vector<u8>& msg)
+void usb_device_rb3_midi_guitar::parse_midi_message(u8 msg[32], usz size)
 {
 	// this is not emulated correctly but the game doesn't seem to care
 	button_state.count++;
 
 	rb3_midi_guitar_log.success("msg: %d", msg[0]);
 	// read frets
-	if (msg.size() == 8 && msg[0] == 0xF0 && msg[4] == 0x01)
+	if (size == 8 && msg[0] == 0xF0 && msg[4] == 0x01)
 	{
 		switch (msg[5])
 		{
@@ -168,13 +174,13 @@ void usb_device_rb3_midi_guitar::parse_midi_message(std::vector<u8>& msg)
 	}
 
 	// read strings
-	if (msg.size() == 8 && msg[0] == 0xF0 && msg[4] == 0x05)
+	if (size == 8 && msg[0] == 0xF0 && msg[4] == 0x05)
 	{
 		button_state.string_velocities[msg[5] - 1] = msg[6];
 	}
 
 	// read buttons
-	if (msg.size() == 10 && msg[0] == 0xF0 && msg[4] == 0x08)
+	if (size == 10 && msg[0] == 0xF0 && msg[4] == 0x08)
 	{
 		// dpad
 
@@ -191,7 +197,7 @@ void usb_device_rb3_midi_guitar::parse_midi_message(std::vector<u8>& msg)
 	}
 
 	// sustain pedal
-	if (msg.size() == 3 && msg[0] == 0xB0 && msg[1] == 0x40) {
+	if (size == 3 && msg[0] == 0xB0 && msg[1] == 0x40) {
 		button_state.sustain_pedal = msg[2] >= 40;
 	}
 }

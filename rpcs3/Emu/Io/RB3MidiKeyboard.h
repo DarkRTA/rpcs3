@@ -2,18 +2,14 @@
 
 #include "Emu/Io/usb_device.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#include <RtMidi.h>
-#pragma GCC diagnostic pop
+#include <rtmidi_c.h>
 
 class usb_device_rb3_midi_keyboard : public usb_device_emulated
 {
 private:
 	u32 response_pos = 0;
 	bool buttons_enabled = false;
-	std::unique_ptr<RtMidiIn> midi_in;
+	RtMidiInPtr midi_in;
 
 	// button states
 	// TODO: emulate velocity
@@ -41,7 +37,7 @@ private:
 		s16 pitch_wheel = 0;
 	} button_state;
 
-	void parse_midi_message(std::vector<u8>& msg);
+	void parse_midi_message(u8 msg[32], usz size);
 	void write_state(u8 buf[27]);
 
 public:
