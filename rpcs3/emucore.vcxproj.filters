@@ -1150,6 +1150,12 @@
     <ClCompile Include="Emu\games_config.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2319,6 +2325,12 @@
     </ClInclude>
     <ClInclude Include="Emu\config_mode.h">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\RB3MidiGuitar.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\RB3MidiKeyboard.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
