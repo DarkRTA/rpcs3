@@ -29,8 +29,8 @@ private:
 
 		u8 dpad = 8;
 
-		u8 frets[6] = {0};
-		u8 string_velocities[6] = {0};
+		std::array<u8, 6> frets{};
+		std::array<u8, 6> string_velocities{};
 	} button_state;
 
 	void parse_midi_message(u8 msg[32], usz size);

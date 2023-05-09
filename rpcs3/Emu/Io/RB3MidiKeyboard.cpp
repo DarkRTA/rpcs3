@@ -48,7 +48,6 @@ static u8 enabled_response[] = {
 
 void usb_device_rb3_midi_keyboard::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-
 	transfer->fake = true;
 
 	// configuration packets sent by rock band 3
@@ -110,11 +109,17 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 	transfer->expected_time = get_timestamp() + 1'000;
 
 	// default input state
-	u8 bytes[27] = {
+	const u8 bytes[27] = {
 		0x00, 0x00, 0x08, 0x80, 0x80, 0x80, 0x80, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x02, 0x00,
 		0x02, 0x00, 0x02};
+
+	if (buf_size < 27)
+	{
+		rb3_midi_keyboard_log.warning("buffer size < 27 bytes. bailing out early");
+		return;
+	}
 
 	memcpy(buf, bytes, 27);
 
@@ -187,12 +192,14 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(u8 msg[32], usz size)
 		case 40: // E2
 			button_state.dpad_right = ((0x10 & msg[0]) == 0x10);
 			break;
+		default:
+			break;
 		}
 
 		// handle keyboard keys
 		if (msg[1] >= 48 && msg[1] <= 72)
 		{
-			u32 key = msg[1] - 48;
+			const u32 key = msg[1] - 48;
 			button_state.keys[key] = ((0x10 & msg[0]) == 0x10);
 			button_state.velocities[key] = msg[2];
 		}
@@ -207,14 +214,16 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(u8 msg[32], usz size)
 		case 0x40:
 			button_state.overdrive = msg[2] > 40;
 			break;
+		default:
+			break;
 		}
 	}
 
 	// pitch wheel
 	if (msg[0] == 0xE0 && size == 3)
 	{
-		u16 msb = msg[2];
-		u16 lsb = msg[1];
+		const u16 msb = msg[2];
+		const u16 lsb = msg[1];
 		button_state.pitch_wheel = (msb << 7) | lsb;
 	}
 }
@@ -273,7 +282,7 @@ void usb_device_rb3_midi_keyboard::write_state(u8 buf[27])
 	buf[13] |= 0b1000'0000 * button_state.overdrive;
 
 	// pitch wheel
-	u8 wheel_pos = std::abs((button_state.pitch_wheel >> 6) - 0x80);
+	const u8 wheel_pos = std::abs((button_state.pitch_wheel >> 6) - 0x80);
 	if (wheel_pos >= 5)
 	{
 		buf[15] = std::min<u8>(std::max<u8>(0x5, wheel_pos), 0x75);
