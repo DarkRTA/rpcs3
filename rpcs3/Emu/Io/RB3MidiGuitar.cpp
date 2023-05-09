@@ -49,7 +49,6 @@ static u8 enabled_response[] = {
 
 void usb_device_rb3_midi_guitar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-
 	transfer->fake = true;
 
 	// configuration packets sent by rock band 3
@@ -109,6 +108,12 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 	// the real device takes 8ms to send a response, but there is
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
+
+	if (buf_size < 27)
+	{
+		rb3_midi_guitar_log.warning("buffer size < 27 bytes. bailing out early");
+		return;
+	}
 
 	// default input state
 	u8 bytes[27] = {
@@ -172,6 +177,9 @@ void usb_device_rb3_midi_guitar::parse_midi_message(u8 msg[32], usz size)
 		case 6:
 			button_state.frets[5] = msg[6] - 0x28;
 			break;
+		default:
+			rb3_midi_guitar_log.warning("invalid string for fret event: %d", msg[5]);
+			break;
 		}
 	}
 
@@ -184,8 +192,6 @@ void usb_device_rb3_midi_guitar::parse_midi_message(u8 msg[32], usz size)
 	// read buttons
 	if (size == 10 && msg[0] == 0xF0 && msg[4] == 0x08)
 	{
-		// dpad
-
 		button_state.dpad = msg[7] & 0x0f;
 
 		button_state.square = (msg[5] & 0b0000'0001) == 0b0000'0001;

@@ -31,8 +31,8 @@ private:
 		bool dpad_left = false;
 		bool dpad_right = false;
 
-		bool keys[25] = {false};
-		u8 velocities[25] = {0};
+		std::array<bool, 25> keys{};
+		std::array<u8, 25> velocities{};
 
 		s16 pitch_wheel = 0;
 	} button_state;
