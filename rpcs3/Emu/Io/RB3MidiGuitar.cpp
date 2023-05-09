@@ -16,10 +16,8 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x0040, 10}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x02, 0x03, 0x0040, 10}));
 
-	char str1[] = "Licensed by Sony Computer Entertainment America";
-	char str2[] = "Harmonix RB3 MIDI Guitar Interface for PlayStation®3";
-	usb_device_emulated::add_string(str1);
-	usb_device_emulated::add_string(str2);
+	usb_device_emulated::add_string("Licensed by Sony Computer Entertainment America");
+	usb_device_emulated::add_string("Harmonix RB3 MIDI Guitar Interface for PlayStation®3");
 
 	// set up midi input
 	midi_in = rtmidi_in_create_default();
@@ -56,6 +54,11 @@ void usb_device_rb3_midi_guitar::control_transfer(u8 bmRequestType, u8 bRequest,
 	// wants to enable midi data or disable it
 	if (bmRequestType == 0x21 && bRequest == 0x9 && wLength == 40)
 	{
+		if (buf_size < 2) {
+			rb3_midi_guitar_log.warning("buffer size < 2, bailing out early");
+			return;
+		}
+
 		switch (buf[2])
 		{
 		case 0x89:
