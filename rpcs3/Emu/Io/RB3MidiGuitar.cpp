@@ -116,7 +116,7 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 	}
 
 	// default input state
-	u8 bytes[27] = {
+	const u8 bytes[27] = {
 		0x00, 0x00, 0x08, 0x80, 0x80, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x40,
 		0x40, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -153,7 +153,6 @@ void usb_device_rb3_midi_guitar::parse_midi_message(u8 msg[32], usz size)
 	// this is not emulated correctly but the game doesn't seem to care
 	button_state.count++;
 
-	rb3_midi_guitar_log.success("msg: %d", msg[0]);
 	// read frets
 	if (size == 8 && msg[0] == 0xF0 && msg[4] == 0x01)
 	{
