@@ -115,18 +115,18 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
 
+	if (buf_size < 28)
+	{
+		rb3_midi_keyboard_log.warning("buffer size < 28 bytes. bailing out early");
+		return;
+	}
+
 	// default input state
 	const u8 bytes[27] = {
 		0x00, 0x00, 0x08, 0x80, 0x80, 0x80, 0x80, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x02, 0x00,
 		0x02, 0x00, 0x02};
-
-	if (buf_size < 28)
-	{
-		rb3_midi_keyboard_log.warning("buffer size < 28 bytes. bailing out early");
-		return;
-	}
 
 	memcpy(buf, bytes, 27);
 
@@ -156,8 +156,7 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 
 void usb_device_rb3_midi_keyboard::parse_midi_message(u8 msg[32], usz size)
 {
-	// this is not properly emulated but the game really does not seem
-	// to care
+	// this is not emulated correctly but the game doesn't seem to care
 	button_state.count++;
 
 	// handle note on/off messages
