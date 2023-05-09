@@ -316,7 +316,7 @@ void usb_device_emulated::isochronous_transfer(UsbTransfer* transfer)
 {
 }
 
-void usb_device_emulated::add_string(char* str)
+void usb_device_emulated::add_string(std::string str)
 {
-	strings.emplace_back(str);
+	strings.emplace_back(std::move(str));
 }
