@@ -54,8 +54,9 @@ void usb_device_rb3_midi_guitar::control_transfer(u8 bmRequestType, u8 bRequest,
 	// wants to enable midi data or disable it
 	if (bmRequestType == 0x21 && bRequest == 0x9 && wLength == 40)
 	{
-		if (buf_size < 2) {
-			rb3_midi_guitar_log.warning("buffer size < 2, bailing out early");
+		if (buf_size < 3)
+		{
+			rb3_midi_guitar_log.warning("buffer size < 3, bailing out early");
 			return;
 		}
 
@@ -76,20 +77,23 @@ void usb_device_rb3_midi_guitar::control_transfer(u8 bmRequestType, u8 bRequest,
 			break;
 		}
 	}
-	// the game expects some sort of response to the configutarion packet
+	// the game expects some sort of response to the configuration packet
 	else if (bmRequestType == 0xa1 && bRequest == 0x1)
 	{
 		transfer->expected_count = buf_size;
-		// TODO: ensure memory safety
 		if (buttons_enabled)
 		{
-			memcpy(buf, &enabled_response[response_pos], buf_size);
-			response_pos += buf_size;
+			const usz remaining_bytes = sizeof(enabled_response) - response_pos;
+			const usz copied_bytes = std::min<usz>(remaining_bytes, buf_size);
+			memcpy(buf, &enabled_response[response_pos], copied_bytes);
+			response_pos += copied_bytes;
 		}
 		else
 		{
-			memcpy(buf, &disabled_response[response_pos], buf_size);
-			response_pos += buf_size;
+			const usz remaining_bytes = sizeof(disabled_response) - response_pos;
+			const usz copied_bytes = std::min<usz>(remaining_bytes, buf_size);
+			memcpy(buf, &disabled_response[response_pos], copied_bytes);
+			response_pos += copied_bytes;
 		}
 	}
 	else if (bmRequestType == 0x21 && bRequest == 0x9 && wLength == 8)
@@ -112,9 +116,9 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
 
-	if (buf_size < 27)
+	if (buf_size < 28)
 	{
-		rb3_midi_guitar_log.warning("buffer size < 27 bytes. bailing out early");
+		rb3_midi_guitar_log.warning("buffer size < 28 bytes. bailing out early");
 		return;
 	}
 
