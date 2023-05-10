@@ -38,7 +38,7 @@ private:
 	} button_state;
 
 	void parse_midi_message(u8* msg, usz size);
-	void write_state(u8 *buf);
+	void write_state(u8* buf);
 
 public:
 	usb_device_rb3_midi_keyboard(const std::array<u8, 7>& location);
