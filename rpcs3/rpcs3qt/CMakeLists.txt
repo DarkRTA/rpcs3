@@ -49,6 +49,7 @@ set(SRC_FILES
     memory_string_searcher.cpp
     memory_viewer_panel.cpp
     microphone_creator.cpp
+    midi_creator.cpp
     movie_item.cpp
     movie_item_base.cpp
     msg_dialog_frame.cpp
