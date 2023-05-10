@@ -39,7 +39,7 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 			return;
 		}
 
-		rb3_midi_guitar_log.trace("Found device with name: %d", buf);
+		rb3_midi_guitar_log.notice("Found device with name: %d", buf);
 
 		if (device_name == buf) {
 			rtmidi_open_port(midi_in, port_number, "RPCS3 MIDI Guitar Input");

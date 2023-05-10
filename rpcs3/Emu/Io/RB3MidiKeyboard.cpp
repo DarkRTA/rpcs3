@@ -38,7 +38,7 @@ usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 
 			return;
 		}
 
-		rb3_midi_keyboard_log.trace("Found device with name: %d", buf);
+		rb3_midi_keyboard_log.notice("Found device with name: %d", buf);
 
 		if (device_name == buf) {
 			rtmidi_open_port(midi_in, port_number, "RPCS3 MIDI Keyboard Input");
