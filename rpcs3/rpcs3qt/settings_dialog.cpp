@@ -1269,6 +1269,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_midi_device_combo[1] = ui->midiDeviceBox2;
 	m_midi_device_combo[2] = ui->midiDeviceBox3;
 
+	SubscribeTooltip(ui->gb_midi_1, tooltips.settings.midi_devices);
+	SubscribeTooltip(ui->gb_midi_2, tooltips.settings.midi_devices);
+	SubscribeTooltip(ui->gb_midi_3, tooltips.settings.midi_devices);
+
 	const auto propagate_midi_devices = [midi_none, this]()
 	{
 		for (u32 index = 0; index < m_midi_device_combo.size(); index++)
