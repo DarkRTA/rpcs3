@@ -6,7 +6,7 @@
 
 LOG_CHANNEL(rb3_midi_guitar_log);
 
-usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& location)
+usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& location, std::string device_name)
 	: usb_device_emulated(location)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 64, 0x12ba, 0x2438, 0x01, 0x01, 0x02, 0x00, 0x01});
@@ -19,11 +19,36 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 	usb_device_emulated::add_string("Licensed by Sony Computer Entertainment America");
 	usb_device_emulated::add_string("Harmonix RB3 MIDI Guitar Interface for PlayStation®3");
 
-	// set up midi input
+	// connect to midi device
 	midi_in = rtmidi_in_create_default();
 	rtmidi_in_ignore_types(midi_in, false, true, true);
-	rtmidi_open_virtual_port(midi_in, "RPCS3 Guitar Midi In");
-	rb3_midi_guitar_log.success("creating midi port");
+
+	s32 port_count = rtmidi_get_port_count(midi_in);
+	char buf[128];
+
+	if (port_count == -1) {
+		rb3_midi_guitar_log.error("Could not get MIDI port count.");
+		return;
+	}
+
+	for (s32 port_number = 0; port_number < port_count; port_number++)
+	{
+		s32 size = sizeof(buf);
+		if (rtmidi_get_port_name(midi_in, port_number, buf, &size) == -1) {
+			rb3_midi_guitar_log.error("Error getting port name for port %d", port_number);
+			return;
+		}
+
+		rb3_midi_guitar_log.trace("Found device with name: %d", buf);
+
+		if (device_name == buf) {
+			rtmidi_open_port(midi_in, port_number, "RPCS3 MIDI Guitar Input");
+			rb3_midi_guitar_log.success("Connected to device: %s", device_name);
+			return;
+		}
+	}
+
+	rb3_midi_guitar_log.error("Could not find device with name: %s", device_name);
 }
 
 usb_device_rb3_midi_guitar::~usb_device_rb3_midi_guitar()
@@ -140,7 +165,7 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 		// being used to signal an error
 		if (rtmidi_in_get_message(midi_in, midi_msg, &size) == -1.0)
 		{
-			rb3_midi_guitar_log.error("Error getting midi message");
+			rb3_midi_guitar_log.error("Error getting MIDI message");
 			return;
 		}
 
@@ -184,7 +209,7 @@ void usb_device_rb3_midi_guitar::parse_midi_message(u8* msg, usz size)
 			button_state.frets[5] = msg[6] - 0x28;
 			break;
 		default:
-			rb3_midi_guitar_log.warning("invalid string for fret event: %d", msg[5]);
+			rb3_midi_guitar_log.warning("Invalid string for fret event: %d", msg[5]);
 			break;
 		}
 	}
