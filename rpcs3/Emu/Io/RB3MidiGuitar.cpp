@@ -6,7 +6,7 @@
 
 LOG_CHANNEL(rb3_midi_guitar_log);
 
-usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& location, std::string device_name)
+usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& location, const std::string& device_name)
 	: usb_device_emulated(location)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 64, 0x12ba, 0x2438, 0x01, 0x01, 0x02, 0x00, 0x01});
@@ -21,27 +21,38 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 
 	// connect to midi device
 	midi_in = rtmidi_in_create_default();
+	ensure(midi_in);
+
+	if (!midi_in->ok)
+	{
+		rb3_midi_guitar_log.error("Could not get MIDI in ptr: %s", midi_in->msg);
+		return;
+	}
+
 	rtmidi_in_ignore_types(midi_in, false, true, true);
 
-	s32 port_count = rtmidi_get_port_count(midi_in);
-	char buf[128];
+	const s32 port_count = rtmidi_get_port_count(midi_in);
 
-	if (port_count == -1) {
+	if (port_count == -1)
+	{
 		rb3_midi_guitar_log.error("Could not get MIDI port count.");
 		return;
 	}
 
 	for (s32 port_number = 0; port_number < port_count; port_number++)
 	{
+		char buf[128]{};
 		s32 size = sizeof(buf);
-		if (rtmidi_get_port_name(midi_in, port_number, buf, &size) == -1) {
+		if (rtmidi_get_port_name(midi_in, port_number, buf, &size) == -1)
+		{
 			rb3_midi_guitar_log.error("Error getting port name for port %d", port_number);
 			return;
 		}
 
 		rb3_midi_guitar_log.notice("Found device with name: %d", buf);
 
-		if (device_name == buf) {
+		if (device_name == buf)
+		{
 			rtmidi_open_port(midi_in, port_number, "RPCS3 MIDI Guitar Input");
 			rb3_midi_guitar_log.success("Connected to device: %s", device_name);
 			return;

@@ -22,6 +22,7 @@
 #include "Emu/Io/RB3MidiKeyboard.h"
 #include "Emu/Io/RB3MidiGuitar.h"
 #include "Emu/Io/usio.h"
+#include "Emu/Io/midi_config_types.h"
 
 #include <libusb.h>
 
@@ -305,10 +306,24 @@ usb_handler_thread::usb_handler_thread()
 		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
 	}
 
-	// TODO: add settings to properly configure these
-	sys_usbd.notice("Adding Emulated Midi Pro Adapter");
-	usb_devices.push_back(std::make_shared<usb_device_rb3_midi_keyboard>(get_new_location(), "AKM320:AKM320 MIDI 1 40:0"));
-	usb_devices.push_back(std::make_shared<usb_device_rb3_midi_guitar>(get_new_location(), "M-Audio MIDISPORT Uno:M-Audio MIDISPORT Uno MIDI 1 40:0"));
+	const std::vector<std::string> devices_list = fmt::split(g_cfg.io.midi_devices.to_string(), { "@@@" });
+	for (usz index = 0; index < std::min(max_midi_devices, devices_list.size()); index++)
+	{
+		const midi_device device = midi_device::from_string(::at32(devices_list, index));
+		if (device.name.empty()) continue;
+
+		sys_usbd.notice("Adding Emulated Midi Pro Adapter (type=%s, name=%s)", device.type, device.name);
+
+		switch (device.type)
+		{
+		case midi_device_type::guitar:
+			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_guitar>(get_new_location(), device.name));
+			break;
+		case midi_device_type::keyboard:
+			usb_devices.push_back(std::make_shared<usb_device_rb3_midi_keyboard>(get_new_location(), device.name));
+			break;
+		}
+	}
 
 	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)
 	{
