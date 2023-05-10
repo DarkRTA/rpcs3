@@ -55,7 +55,7 @@ void usb_device_rb3_midi_keyboard::control_transfer(u8 bmRequestType, u8 bReques
 	{
 		if (buf_size < 3)
 		{
-			rb3_midi_keyboard_log.warning("buffer size < 3, bailing out early");
+			rb3_midi_keyboard_log.warning("buffer size < 3, bailing out early (buf_size=0x%x)", buf_size);
 			return;
 		}
 
@@ -115,9 +115,9 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
 
-	if (buf_size < 28)
+	if (buf_size < 27)
 	{
-		rb3_midi_keyboard_log.warning("buffer size < 28 bytes. bailing out early");
+		rb3_midi_keyboard_log.warning("buffer size < 27, bailing out early (buf_size=0x%x)", buf_size);
 		return;
 	}
 
@@ -154,13 +154,13 @@ void usb_device_rb3_midi_keyboard::interrupt_transfer(u32 buf_size, u8* buf, u32
 	write_state(buf);
 }
 
-void usb_device_rb3_midi_keyboard::parse_midi_message(u8 msg[32], usz size)
+void usb_device_rb3_midi_keyboard::parse_midi_message(u8* msg, usz size)
 {
 	// this is not emulated correctly but the game doesn't seem to care
 	button_state.count++;
 
 	// handle note on/off messages
-	if ((msg[0] == 0x80 || msg[0] == 0x90) && size == 3)
+	if (size == 3 && (msg[0] == 0x80 || msg[0] == 0x90))
 	{
 		// handle navigation buttons
 		switch (msg[1])
@@ -212,7 +212,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(u8 msg[32], usz size)
 	}
 
 	// control channel for overdrive
-	else if (msg[0] == 0xB0 && size == 3)
+	else if (size == 3 && msg[0] == 0xB0)
 	{
 		switch (msg[1])
 		{
@@ -226,7 +226,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(u8 msg[32], usz size)
 	}
 
 	// pitch wheel
-	else if (msg[0] == 0xE0 && size == 3)
+	else if (size == 3 && msg[0] == 0xE0)
 	{
 		const u16 msb = msg[2];
 		const u16 lsb = msg[1];
@@ -234,7 +234,7 @@ void usb_device_rb3_midi_keyboard::parse_midi_message(u8 msg[32], usz size)
 	}
 }
 
-void usb_device_rb3_midi_keyboard::write_state(u8 buf[27])
+void usb_device_rb3_midi_keyboard::write_state(u8* buf)
 {
 	// buttons
 	buf[0] |= 0b0000'0010 * button_state.cross;

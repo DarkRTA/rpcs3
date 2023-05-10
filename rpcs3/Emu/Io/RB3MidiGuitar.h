@@ -33,8 +33,8 @@ private:
 		std::array<u8, 6> string_velocities{};
 	} button_state;
 
-	void parse_midi_message(u8 msg[32], usz size);
-	void write_state(u8 buf[27]);
+	void parse_midi_message(u8* msg, usz size);
+	void write_state(u8* buf);
 
 public:
 	usb_device_rb3_midi_guitar(const std::array<u8, 7>& location);

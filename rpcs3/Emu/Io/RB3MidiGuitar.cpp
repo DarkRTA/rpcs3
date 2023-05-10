@@ -56,7 +56,7 @@ void usb_device_rb3_midi_guitar::control_transfer(u8 bmRequestType, u8 bRequest,
 	{
 		if (buf_size < 3)
 		{
-			rb3_midi_guitar_log.warning("buffer size < 3, bailing out early");
+			rb3_midi_guitar_log.warning("buffer size < 3, bailing out early (buf_size=0x%x)", buf_size);
 			return;
 		}
 
@@ -116,9 +116,9 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 	// no reason we can't make it faster
 	transfer->expected_time = get_timestamp() + 1'000;
 
-	if (buf_size < 28)
+	if (buf_size < 27)
 	{
-		rb3_midi_guitar_log.warning("buffer size < 28 bytes. bailing out early");
+		rb3_midi_guitar_log.warning("buffer size < 27, bailing out early (buf_size=0x%x)", buf_size);
 		return;
 	}
 
@@ -155,7 +155,7 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 	write_state(buf);
 }
 
-void usb_device_rb3_midi_guitar::parse_midi_message(u8 msg[32], usz size)
+void usb_device_rb3_midi_guitar::parse_midi_message(u8* msg, usz size)
 {
 	// this is not emulated correctly but the game doesn't seem to care
 	button_state.count++;
@@ -217,7 +217,7 @@ void usb_device_rb3_midi_guitar::parse_midi_message(u8 msg[32], usz size)
 	}
 }
 
-void usb_device_rb3_midi_guitar::write_state(u8 buf[27])
+void usb_device_rb3_midi_guitar::write_state(u8* buf)
 {
 	// encode frets
 	buf[8] |= (button_state.frets[0] & 0b11111) << 2;
